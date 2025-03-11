@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}Inventar{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+
+    {% if not inventory_enabled %}
+        <p class="text-center text-danger fw-bold">Inventarul nu este activat de administrator</p>
+    {% else %}
+        <div class="text-center">
+            <h1>Inventare pe farmacii</h1>
+
+            {% if locations %}
+                <div class="list-group">
+                    {% for location in locations %}
+                        <a href="{{ url_for('inventory_page', location_name=location) }}" class="list-group-item list-group-item-action">
+                            {{ location }}
+                        </a>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="text-center text-muted">Nu există farmacii disponibile.</p>
+            {% endif %}
+        </div>
+    {% endif %}
+
+</div>
+{% endblock %}

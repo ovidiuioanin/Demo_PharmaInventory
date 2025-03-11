@@ -1,0 +1,29 @@
+# Web Framework and Async Server
+quart
+hypercorn
+python-socketio
+
+# Database
+sqlalchemy
+
+# SQLite Async Support
+aiosqlite
+
+# Data Processing and File Operations
+pandas
+openpyxl
+dask
+aiofiles
+
+# Computer Vision and OCR
+paddleocr==2.9.1
+paddlepaddle==2.6.0
+opencv-python
+numpy
+
+# Audio Processing and Speech Recognition
+pydub
+google-cloud-speech
+
+# Utilities
+python-dotenv

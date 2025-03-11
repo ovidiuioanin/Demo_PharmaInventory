@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PharmaVision</title>
+    <script src="https://cdn.socket.io/4.4.1/socket.io.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            position: fixed;
+            background-color: #f8f9fa;
+            overflow: auto;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            margin-top: 50px;
+            width: 90%;
+            max-width: 600px;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: fixed;
+            top: 40%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        .camera-container {
+            position: relative;
+            width: 100vw;
+            height: 55vh;
+            max-width: 100%;
+            max-height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+        video, canvas {
+            width: 99%;
+            height: 99%;
+            object-fit: cover;
+            border-radius: 10px;
+            border: 2px solid #ccc;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        .text-block {
+            position: absolute;
+            border: 3px solid red;
+            background: rgba(255, 0, 0, 0.2);
+            cursor: pointer;
+            color: black;
+            font-size: 14px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+        }
+        .text-block.selected {
+            background: rgba(0, 255, 0, 0.5) !important;
+            border-color: green !important;
+        }
+        .button-container {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+        }
+        button {
+            padding: 10px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .btn-primary {
+            background-color: #007bff;
+            color: white;
+        }
+        .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container text-center">
+        <h1 class="mb-3">PharmaVision</h1>
+        <p class="text-muted">Tap the camera view to capture</p>
+
+        <!-- Camera Container -->
+        <div class="camera-container" id="cameraContainer">
+            <video id="video" autoplay playsinline></video>
+            <canvas id="canvas" style="display:none;"></canvas>
+        </div>
+
+        <!-- Buttons -->
+        <div class="button-container">
+            <button id="newCapture" class="btn btn-secondary" style="display:none;">New Capture</button>
+            <button id="confirmSelection" class="btn btn-primary" style="display:none;">Confirm Selection</button>
+        </div>
+    </div>
+
+    <script>
+        const socket = io.connect(window.location.origin);
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const cameraContainer = document.getElementById('cameraContainer');
+        const newCaptureButton = document.getElementById('newCapture');
+        const confirmSelectionButton = document.getElementById('confirmSelection');
+
+        // Extract location_name from URL
+        const params = new URLSearchParams(window.location.search);
+        const locationName = params.get("location_name");
+
+        // Start Camera Stream
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+            .then(stream => {
+                video.srcObject = stream;
+                video.onloadedmetadata = () => {
+                const screenWidth = window.innerWidth;
+                const screenHeight = window.innerHeight;
+
+                // Get the device aspect ratio
+                const deviceAspectRatio = screenWidth / screenHeight;
+
+                // Set the video and canvas dimensions based on the actual video feed
+                video.width = video.videoWidth;
+                video.height = video.videoHeight;
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+
+                console.log(`Live feed size: ${video.videoWidth}x${video.videoHeight}`);
+            };
+
+            })
+            .catch(error => console.error("Error accessing camera:", error));
+
+        // Capture Image and Send to Backend
+        video.addEventListener('click', () => {
+    // Ensure canvas is resized to match the video
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    // Draw the video frame onto the canvas
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const frame = canvas.toDataURL('image/jpeg');
+
+    // Hide video and show processed frame
+    video.style.display = "none";
+    canvas.style.display = "block";
+    newCaptureButton.style.display = "inline-block";
+    confirmSelectionButton.style.display = "inline-block";
+
+    // Send frame to backend for OCR
+    socket.emit('capture', frame);
+});
+
+        // Handle OCR Response from Backend
+        socket.on('processed_frame', (data) => {
+            const image = new Image();
+            image.onload = () => {
+                ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+                const textBlocks = data.text_blocks || [];
+                textBlocks.forEach(block => {
+                    const div = document.createElement("div");
+                    div.classList.add("text-block");
+                    div.style.left = `${block.x * 100}%`;
+                    div.style.top = `${block.y * 100}%`;
+                    div.style.width = `${block.width * 100}%`;
+                    div.style.height = `${block.height * 100}%`;
+                    div.textContent = block.text;
+                    div.onclick = function() {
+                        div.classList.toggle("selected");
+                    };
+                    div.ondblclick = function () {
+                        const input = document.createElement("input");
+                        input.type = "text";
+                        input.value = div.textContent;
+                        input.style.width = "100%";
+                        input.style.border = "none";
+                        input.style.background = "transparent";
+                        input.style.textAlign = "center";
+                        input.style.fontSize = "14px";
+                        input.style.fontWeight = "bold";
+
+                        input.onblur = function () {
+                            div.textContent = input.value.trim();
+                            div.classList.add("selected");
+                            div.onclick = function () { 
+                                div.classList.toggle("selected"); 
+                            };
+                            input.remove();
+                        };
+
+                        div.textContent = "";
+                        div.appendChild(input);
+                        input.focus();
+                    };
+                    cameraContainer.appendChild(div);
+                });
+            };
+            image.src = data.image;
+        });
+
+        // Reset Capture
+        newCaptureButton.addEventListener('click', () => {
+            video.style.display = "block";
+            canvas.style.display = "none";
+            newCaptureButton.style.display = "none";
+            confirmSelectionButton.style.display = "none";
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            document.querySelectorAll(".text-block").forEach(e => e.remove());
+        });
+
+        // Confirm Selection and Redirect
+        confirmSelectionButton.addEventListener('click', () => {
+            const selectedBlocks = Array.from(document.querySelectorAll(".text-block.selected"))
+                                      .map(block => block.textContent.trim());
+
+            if (selectedBlocks.length === 0) {
+                alert("Please select at least one text block.");
+                return;
+            }
+
+            const selectedText = encodeURIComponent(selectedBlocks.join(" "));
+
+            // Redirect to the correct inventory location
+            console.log(`Redirecting to: /inventory/${locationName}?selected_text=${selectedText}`);
+            setTimeout(() => {
+                window.location.href = `/inventory/${locationName}?selected_text=${selectedText}`;
+            }, 100);
+        });
+    </script>
+
+</body>
+</html>

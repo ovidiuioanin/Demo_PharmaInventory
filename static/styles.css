@@ -1,0 +1,60 @@
+body {
+    background-color: #f8f9fa;
+}
+
+.list-group {
+    margin-bottom: 50px;
+}
+
+.recording {
+    animation: blink 1s infinite;
+    color: red;
+}
+
+@keyframes blink {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
+.list-group-item {
+    font-size: 14px;  /* Font size for all suggestions */
+    padding: 5px 10px; 
+}
+
+.list-group-item span {
+    font-size: 12px; /* Brand text */
+}
+
+.custom-navbar {
+    background-color: #8ff7e1 !important;
+}
+
+/* Prevent zoom when tapping buttons */
+.no-zoom {
+    touch-action: manipulation !important;
+}
+
+.btn-md {
+    font-size: 1.5rem;  
+    padding: 10px;      
+}
+
+/* Number input  */
+input[type="number"] {
+    height: 50px;       
+    text-align: center; 
+    font-size: 1.8rem;  
+}
+
+.btn-minus {
+    background-color: rgba(220, 53, 69, 0.75) !important;
+    border-color: rgba(220, 53, 69, 0.5) !important; 
+    color: white !important;
+}
+
+.btn-plus {
+    background-color: rgba(40, 167, 69, 0.75) !important;
+    border-color: rgba(40, 167, 69, 0.5) !important;
+    color: white !important;
+}

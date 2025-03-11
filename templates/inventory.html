@@ -1,0 +1,372 @@
+{% extends "base.html" %}
+
+{% block title %}Inventory - {{ location_name }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2 class="text-center">Inventar - {{ location_name }}</h2>
+
+    <!-- Product search form -->
+    <form method="POST" action="">
+        <div class="mb-3 position-relative">
+            <label for="product_name" class="form-label">Produs</label>
+            <div class="input-group">
+                <input type="text" class="form-control" id="product_name" name="product_name" autocomplete="off" required>
+                <button type="button" class="btn btn-outline-secondary" id="voiceSearchBtn">🎤</button>
+                <button type="button" class="btn btn-outline-secondary" id="cameraSearchBtn">📷</button>
+
+            </div>
+            <div id="suggestions" class="list-group position-absolute w-100" style="z-index: 1000;"></div>
+        </div>
+
+        <!-- Cutii -->
+        <div class="mb-3">
+            <label class="form-label text-center w-100">Cutii</label>
+            <div class="row g-2">
+                <div class="col-4">
+                    <button type="button" class="btn btn-md w-100 no-zoom btn-minus" onclick="adjustValue('cutii', -1)">−</button>
+                </div>
+                <div class="col-4">
+                    <input type="number" class="form-control text-center fs-4 no-zoom" id="cutii" name="cutii" value="0" min="0" required>
+                </div>
+                <div class="col-4">
+                    <button type="button" class="btn btn-md w-100 no-zoom btn-plus" onclick="adjustValue('cutii', 1)">+</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Fractii -->
+        <div class="mb-3">
+            <label class="form-label text-center w-100">Fractii</label>
+            <div class="row g-2">
+                <div class="col-4">
+                    <button type="button" class="btn btn-md w-100 no-zoom btn-minus" onclick="adjustValue('fractii', -1)">−</button>
+                </div>
+                <div class="col-4">
+                    <input type="number" class="form-control text-center fs-4 no-zoom" id="fractii" name="fractii" value="0" min="0" required>
+                </div>
+                <div class="col-4">
+                    <button type="button" class="btn btn-md w-100 no-zoom btn-plus" onclick="adjustValue('fractii', 1)">+</button>
+                </div>
+            </div>
+        </div>
+
+
+        
+        <div class="text-end">
+            <button type="submit" class="btn btn-primary mb-4">Adauga</button>
+        </div>
+
+        <p id="existingStockMessage" class="text-muted" style="display: none;"></p>
+
+    </form>
+
+    <hr>
+
+    <h4>Inventar Salvat</h4>
+
+    <!-- Collapse Button -->
+    <div class="mb-4">
+        <button class="btn btn-secondary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#inventoryCollapse" id="toggleInventory">
+            Afiseaza/Ascunde Inventar
+        </button>
+    </div>
+
+    <!-- Collapsible Inventory Section -->
+    <div class="collapse" id="inventoryCollapse">
+        <!-- Search Bar -->
+        <div class="mb-3">
+            <input type="text" id="searchInput" class="form-control" placeholder="Cauta produs salvat..." onkeyup="filterTable()">
+        </div>
+
+        {% if inventory_data %}
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Produs</th>
+                            <th>Cutii</th>
+                            <th>Fractii</th>
+                            <th>Data</th>
+                            <th>Actiuni</th>
+                        </tr>
+                    </thead>
+                    <tbody id="inventoryTable">
+                        {% for item in inventory_data %}
+                        <tr>
+                            <td>{{ item["Product Name"] }}</td>
+                            <td>{{ item["Cutii (Boxes)"] }}</td>
+                            <td>{{ item["Fractii (Fractions)"] }}</td>
+                            <td>{{ item["Timestamp"] }}</td>
+                            <td>
+                                <a href="{{ url_for('delete_entry', location_name=location_name, index=loop.index0) }}" class="btn btn-danger btn-sm">Sterge</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Export XLSX Button -->
+            <a href="{{ url_for('export_inventory', location_name=location_name) }}" class="btn btn-success mb-4">Exporta XLSX</a>
+
+        {% else %}
+            <p>Nu exista produse in inventarul {{ location_name }}.</p>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+    .no-zoom {
+        touch-action: manipulation; /* Prevents double-tap zoom on mobile */
+    }
+    .table {
+        font-size: 10px;
+    }
+
+    .table th, .table td {
+        padding: 6px;
+    }
+
+    .text-truncate {
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+    }
+
+    .text-nowrap {
+        white-space: nowrap;  /* Prevent wrapping for headers */
+    }
+</style>
+
+<script>
+// Product search suggestions
+document.getElementById("product_name").addEventListener("input", function () {
+    let input = this.value.trim();
+    let suggestionsBox = document.getElementById("suggestions");
+    let existingStockMessage = document.getElementById("existingStockMessage");
+
+    if (input.length < 2) {
+        suggestionsBox.innerHTML = "";
+        existingStockMessage.style.display = "none";
+        return;
+    }
+
+    fetch(`/search_products?q=${encodeURIComponent(input)}`)
+        .then(response => response.json())
+        .then(data => {
+            suggestionsBox.innerHTML = "";
+            if (data.length === 0) {
+                suggestionsBox.style.display = "none";
+                return;
+            }
+            suggestionsBox.style.display = "block";
+
+            data.forEach(item => {
+                let suggestionItem = document.createElement("a");
+                suggestionItem.classList.add("list-group-item", "list-group-item-action");
+
+                // Show product name and brand
+                suggestionItem.innerHTML = `${item.product} <span style="color: grey; font-size: 12px;">(${item.brand})</span>`;
+
+                suggestionItem.onclick = function () {
+                    document.getElementById("product_name").value = item.product;
+                    suggestionsBox.innerHTML = "";
+
+                    // Check existing stock from Flask variable
+                    let existingProducts = JSON.parse('{{ existing_products | tojson }}');
+                    if (existingProducts[item.product]) {
+                        let cutii = existingProducts[item.product].cutii;
+                        let fractii = existingProducts[item.product].fractii;
+                        existingStockMessage.innerHTML = `Exista deja ${cutii} cutii, ${fractii} fracții pentru: <br> ${item.product} <br> ${item.brand}.`;
+                        existingStockMessage.style.display = "block";
+                    } else {
+                        existingStockMessage.style.display = "none";
+                    }
+                };
+
+                suggestionsBox.appendChild(suggestionItem);
+            });
+        })
+        .catch(error => console.error("Error fetching products:", error));
+});
+
+
+// Hide suggestions when clicking outside Product search box
+document.addEventListener("click", function(event) {
+    let suggestionsBox = document.getElementById("suggestions");
+    if (!document.getElementById("product_name").contains(event.target)) {
+        suggestionsBox.innerHTML = "";
+        suggestionsBox.style.display = "none";
+    }
+});
+
+// Saved inventory table filter
+function filterTable() {
+    let input = document.getElementById("searchInput").value.toLowerCase();
+    let rows = document.getElementById("inventoryTable").getElementsByTagName("tr");
+
+    for (let i = 0; i < rows.length; i++) {
+        let productName = rows[i].getElementsByTagName("td")[0].textContent.toLowerCase();
+        if (productName.includes(input)) {
+            rows[i].style.display = "";
+        } else {
+            rows[i].style.display = "none";
+        }
+    }
+}
+
+// Function to adjust the input values +/-
+function adjustValue(id, delta) {
+    let input = document.getElementById(id);
+    let currentValue = parseInt(input.value) || 0;
+    let newValue = currentValue + delta;
+    if (newValue >= 0) {  // Prevent negative values
+        input.value = newValue;
+    }
+}
+
+// Prevent tap to zoom on mobile
+$(document).ready(function() {
+    $('.no-zoom').on('touchend', function(e) {
+        e.preventDefault(); // Prevents iPhone double-tap zoom
+        $(this).trigger("click"); // Ensures the button click event still fires
+    });
+});
+
+
+// Google STT related functions
+const voiceButton = document.getElementById("voiceSearchBtn");
+const productInput = document.getElementById("product_name");
+
+// Disable voice button if MediaRecorder is not supported
+if (!window.MediaRecorder) {
+    console.warn("MediaRecorder not supported in this browser");
+    voiceButton.disabled = true;
+    voiceButton.title = "Voice recording not supported in this browser";
+}
+
+let mediaRecorder;
+let audioChunks = [];
+
+if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+    voiceButton.addEventListener("click", startRecording);
+} else {
+    voiceButton.disabled = true;
+    voiceButton.title = "Voice recording not supported in this browser";
+}
+
+function startRecording() {
+    navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(stream => {
+            mediaRecorder = new MediaRecorder(stream);
+            audioChunks = [];
+
+            mediaRecorder.ondataavailable = event => {
+                audioChunks.push(event.data);
+            };
+
+            mediaRecorder.onstop = sendAudioToServer;
+
+            mediaRecorder.start();
+            voiceButton.innerHTML = "🎙️"; // Show recording icon
+            voiceButton.classList.add("recording"); // Add blinking effect
+
+            setTimeout(() => {
+                mediaRecorder.stop();
+                voiceButton.innerHTML = "🎤"; // Reset icon
+                voiceButton.classList.remove("recording");
+            }, 3000);  // Stop after 3 seconds
+        })
+        .catch(error => {
+            console.error("Microphone access error:", error);
+            alert("Error accessing microphone: " + error.message);
+        });
+}
+
+
+
+function sendAudioToServer() {
+    const audioBlob = new Blob(audioChunks, { type: "audio/webm" });
+    const formData = new FormData();
+    formData.append("audio", audioBlob);
+
+    fetch("/process_audio", {
+        method: "POST",
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.recognized_text) {
+            productInput.value = data.recognized_text;
+            productInput.dispatchEvent(new Event("input"));  // Triggers live search
+        } else {
+            alert("Nu s-a putut recunoaște textul. Vă rugăm să încercați din nou.");
+        }
+    })
+    .catch(error => console.error("Error sending audio:", error));
+}
+
+// Check if browser allows microphone access
+navigator.permissions.query({ name: "microphone" }).then((permissionStatus) => {
+    if (permissionStatus.state === "denied") {
+        alert("Microphone access is blocked. Please enable it in browser settings.");
+    }
+});
+
+// Store collapse button state
+document.addEventListener("DOMContentLoaded", function() {
+    let inventoryCollapse = document.getElementById("inventoryCollapse");
+    let toggleButton = document.getElementById("toggleInventory");
+
+    // Load collapse state from localStorage
+    if (localStorage.getItem("inventoryCollapse") === "open") {
+        inventoryCollapse.classList.add("show");  // Keep it open
+    }
+
+    // Store state when the collapse is toggled
+    inventoryCollapse.addEventListener("shown.bs.collapse", function() {
+        localStorage.setItem("inventoryCollapse", "open");
+    });
+
+    inventoryCollapse.addEventListener("hidden.bs.collapse", function() {
+        localStorage.setItem("inventoryCollapse", "closed");
+    });
+});
+
+
+// Check for OCR text in the URL and autofill the product search field
+const params = new URLSearchParams(window.location.search);
+const selectedText = params.get("selected_text");
+
+if (selectedText) {
+    const productInput = document.getElementById("product_name");
+    productInput.value = decodeURIComponent(selectedText);
+    console.log("OCR Text Autofilled:", productInput.value);
+
+    // Manually trigger the input event to fetch suggestions
+    productInput.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+        const params = new URLSearchParams(window.location.search);
+        const selectedText = params.get("selected_text");
+
+        if (selectedText) {
+            const productInput = document.getElementById("product_name");
+            productInput.value = decodeURIComponent(selectedText);
+            console.log("OCR Text Autofilled:", productInput.value);
+        }
+    });
+
+    document.getElementById("cameraSearchBtn").addEventListener("click", function () {
+        const locationName = "{{ location_name }}";  // Get location from Quart
+        window.location.href = `/ocr?location_name=${encodeURIComponent(locationName)}`;
+    });
+
+
+
+
+</script>
+
+{% endblock %}

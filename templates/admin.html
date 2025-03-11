@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Panel{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="text-center">Admin Panel</h2>
+
+    <form method="POST" class="text-center my-4">
+        <button type="submit" name="set_inventory" value="on" class="btn btn-success me-2"
+            {% if inventory_enabled %}disabled{% endif %}>
+            Set Inventar: ON
+        </button>
+        <button type="submit" name="set_inventory" value="off" class="btn btn-danger"
+            {% if not inventory_enabled %}disabled{% endif %}>
+            Set Inventar: OFF
+        </button>
+    </form>
+    
+    
+    <form method="POST" class="text-center">
+        <button type="submit" name="export_all" class="btn btn-success w-100 mb-3">Exporta toate inventarele</button>
+        <button type="submit" name="reset_all" class="btn btn-danger w-100">Reset total</button>
+    </form>
+
+    <div class="text-center mt-4">
+        <a href="{{ url_for('admin_logout') }}" class="btn btn-secondary">Logout</a>
+    </div>
+</div>
+{% endblock %}
