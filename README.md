@@ -164,3 +164,6 @@ MedInventory/
 ### Web Routes
 - Multiple route handlers for HTTP endpoints listed in the Documentation
 
+
+[PharmaInventory.webm](https://github.com/user-attachments/assets/255a753a-4300-4765-8832-6650871244b7)
+
