@@ -1,4 +1,4 @@
-# PahrmaInventory - Pharmacy Inventory Management System
+# PharmaInventory - Pharmacy Inventory Management System
 
 MedInventory is a web-based application designed to help pharmacies manage their inventory logging through technologies like OCR (Optical Character Recognition) and speech recognition. The system enables staff to quickly catalog products by scanning product labels or using voice input, streamlining the manual inventory logging process.
 
