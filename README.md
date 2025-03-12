@@ -64,7 +64,7 @@ MedInventory/
 ├── requirements.txt      # Python dependencies
 ├── .env                  # Environment variables
 ├── data/
-│   └── Database.xlsx  # Product database
+│   └── Database.xlsx     # Product database
 ├── static/
 │   ├── styles.css        # CSS styles
 │   └── img/              # Image assets
